@@ -23,7 +23,7 @@ public class Enemy : MonoBehaviour {
 	void SetVelocity () {
         // the speed multiplier is a base multiplier which is used to
         // offset the effects of different aspect ratios
-        speedMultiplier = (16 / 9) / (Screen.height / Screen.width);
+        speedMultiplier = (9f / 16f) / (Screen.height / (float) Screen.width);
         float speed = Mathf.Lerp(enemySpeed * (1 - speedRandomness), enemySpeed * (1 + speedRandomness), Random.value);
         float mag = speed * speedMultiplier;
         rigidbody.velocity = (movementDirection == Direction.Left ? Vector3.right * mag : Vector3.left * mag);

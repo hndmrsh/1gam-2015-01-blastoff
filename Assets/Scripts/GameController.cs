@@ -1,13 +1,24 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
 using System.Collections;
 
 public class GameController : MonoBehaviour {
 
     private const string KEY_HIGH_SCORE = "key_high_score";
     private const int PLAYER_LAYER_MASK = 1 << 9;
+    private const float TIME_TO_FADE = 0.2f;
 
     public GUIStyle guiStyle;
     public GUIStyle deadGuiStyle;
+
+    public GameObject titleCard;
+    private Text[] titleTexts;
+    private Color[] targetTitleColours;
+    private bool fading = false;
+    private float timeFaded = 0f;
+
+    public Text scoreText;
+    public Text highScoreText;
 
     public Ship playerShip;
     public Enemy[] enemies;
@@ -66,6 +77,16 @@ public class GameController : MonoBehaviour {
 
         // load high score
         highScore = PlayerPrefs.GetInt(KEY_HIGH_SCORE, 0);
+        highScoreText.text = highScore.ToString();
+
+        titleTexts = titleCard.GetComponentsInChildren<Text>();
+        targetTitleColours = new Color[titleTexts.Length];
+        for(int i = 0; i < titleTexts.Length; i++)
+        {
+            Color c = titleTexts[i].color;
+            c.a = 0f;
+            targetTitleColours[i] = c;
+        }
 
         GenerateTimeToNextEnemySpawn();
 	}
@@ -73,8 +94,6 @@ public class GameController : MonoBehaviour {
     // OnGUI is called for rendering and handling GUI events (Since v2.0)
     public void OnGUI()
     {
-        string scores = "Score = " + score + "\nHigh score = " + highScore;
-        GUI.Label(new Rect(20, 20, 400, 50), scores, guiStyle);
         if (playerShip.Dead)
         {
             GUI.Label(new Rect(0, Screen.height / 2, Screen.width, 50), "YOU DIED\nTOUCH TO RESTART", deadGuiStyle);            
@@ -87,6 +106,26 @@ public class GameController : MonoBehaviour {
         // check for touch and apply thrust to ship
         bool touch = CheckInput();
 
+        if (touch && timeFaded < TIME_TO_FADE)
+        {
+            fading = true;
+        }
+
+        if (fading)
+        {
+            for (int i = 0; i < titleTexts.Length; i++)
+            {
+                titleTexts[i].color = Color.Lerp(titleTexts[i].color, targetTitleColours[i], timeFaded / TIME_TO_FADE);
+            }
+
+            timeFaded += Time.deltaTime;
+
+            if (timeFaded >= TIME_TO_FADE)
+            {
+                fading = false;
+            }
+        }
+        
         if (playerShip.Dead)
         {
             Time.timeScale = 0;
@@ -113,8 +152,16 @@ public class GameController : MonoBehaviour {
         // spawn enemies
         SpawnEnemies();
 
-        // calculate score
-        score = (int)(playerShip.transform.position.y);
+        if (!playerShip.Dead)
+        {
+            // calculate score
+            score = (int)(playerShip.transform.position.y);
+            scoreText.text = score.ToString();
+            if (score > highScore)
+            {
+                highScoreText.text = score.ToString();
+            }
+        }
 	}
 
     private void SpawnEnemies()
