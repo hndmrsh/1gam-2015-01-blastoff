@@ -5,6 +5,9 @@ public class Ship : MonoBehaviour {
 
     public int thrustAmount = 1000;
 
+    public AudioClip fire, stop;
+    private AudioSource engine;
+
     public bool Dead
     {
         get;
@@ -20,13 +23,33 @@ public class Ship : MonoBehaviour {
         }
         set
         {
-            thrustOn = value;     
+            if (thrustOn != value)
+            {
+                UpdateAudio(value);
+            }
+
+            thrustOn = value;
+        }
+    }
+
+    private void UpdateAudio(bool play)
+    {
+        if (play)
+        {
+            AudioSource.PlayClipAtPoint(fire, this.transform.position);
+            engine.Play();
+        }
+        else
+        {
+            engine.Stop();
+            AudioSource.PlayClipAtPoint(stop, this.transform.position);
         }
     }
 
     void Start()
     {
         Dead = false;
+        engine = GetComponent<AudioSource>();
     }
 
     public void Update()
@@ -44,6 +67,8 @@ public class Ship : MonoBehaviour {
         if (collision.gameObject.GetComponent<Enemy>())
         {
             Dead = true;
+            engine.Stop();
+
             GameController gameController = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameController>();
             gameController.GameOver();
         }

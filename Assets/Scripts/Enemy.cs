@@ -19,6 +19,8 @@ public class Enemy : MonoBehaviour {
     private float destroyX;
     private float speedMultiplier;
 
+    private Vector3 torque;
+
 	// Use this for initialization
 	void SetVelocity () {
         // the speed multiplier is a base multiplier which is used to
@@ -27,6 +29,9 @@ public class Enemy : MonoBehaviour {
         float speed = Mathf.Lerp(enemySpeed * (1 - speedRandomness), enemySpeed * (1 + speedRandomness), Random.value);
         float mag = speed * speedMultiplier;
         rigidbody.velocity = (movementDirection == Direction.Left ? Vector3.right * mag : Vector3.left * mag);
+
+
+        rigidbody.AddTorque(torque);
 	}
 
     void Update()
@@ -70,6 +75,8 @@ public class Enemy : MonoBehaviour {
         float randomY = Screen.height * OFFSCREEN_SPAWN_MULTIPLIER * Random.value;
         Vector3 pos = new Vector3(spawnX, Camera.main.ScreenToWorldPoint(new Vector3(0, randomY, z)).y);
 
+        Vector3 randomTorque = new Vector3(Random.value * 10, Random.value * 10, Random.value * 10);
+
         float rayDist = Mathf.Abs(leftSpawnX - rightSpawnX);
 
         if (TestPos(pos, dir, halfObjectHeight, rayDist))
@@ -78,6 +85,7 @@ public class Enemy : MonoBehaviour {
 
             e.movementDirection = dir;
             e.destroyX = destroyX;
+            e.torque = randomTorque;
             e.SetVelocity();
 
             return true;

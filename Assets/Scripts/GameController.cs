@@ -8,6 +8,9 @@ public class GameController : MonoBehaviour {
     private const int PLAYER_LAYER_MASK = 1 << 9;
     private const float TIME_TO_FADE = 0.2f;
 
+    public AudioSource introMusic;
+    public AudioSource endMusic;
+
     public GUIStyle guiStyle;
     public GUIStyle deadGuiStyle;
 
@@ -19,10 +22,14 @@ public class GameController : MonoBehaviour {
 
     public Text scoreText;
     public Text highScoreText;
+    public Text tryAgainText;
+    public Text newHighScoreText;
 
     public Ship playerShip;
     public Enemy[] enemies;
     public Camera camera;
+
+    private bool started = false;
 
     [Range(0,1)]
     public float spawnRandomness = 0.2f;
@@ -91,20 +98,17 @@ public class GameController : MonoBehaviour {
         GenerateTimeToNextEnemySpawn();
 	}
 
-    // OnGUI is called for rendering and handling GUI events (Since v2.0)
-    public void OnGUI()
-    {
-        if (playerShip.Dead)
-        {
-            GUI.Label(new Rect(0, Screen.height / 2, Screen.width, 50), "YOU DIED\nTOUCH TO RESTART", deadGuiStyle);            
-        }
-    }
-	
 	// Update is called once per frame
 	void Update () 
     {
         // check for touch and apply thrust to ship
         bool touch = CheckInput();
+
+        if (!started && touch)
+        {
+            started = true;
+            introMusic.Play();
+        }
 
         if (touch && timeFaded < TIME_TO_FADE)
         {
@@ -261,6 +265,19 @@ public class GameController : MonoBehaviour {
         if (score > highScore)
         {
             PlayerPrefs.SetInt(KEY_HIGH_SCORE, score);
+        }
+
+        if (introMusic.isPlaying)
+        {
+            introMusic.Stop();
+        }
+
+        endMusic.Play();
+
+        tryAgainText.gameObject.SetActive(true);
+        if (score > highScore)
+        {
+            newHighScoreText.gameObject.SetActive(true);
         }
     }
 }
