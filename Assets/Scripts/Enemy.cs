@@ -96,7 +96,7 @@ public class Enemy : MonoBehaviour {
 
     private bool TestPos(Vector3 pos, Direction dir, float halfObjectHeight, float rayDist)
     {
-        if (pos.y < 3)
+        if (pos.y < 10)
         {
             // don't spawn close to start position
             return false;
