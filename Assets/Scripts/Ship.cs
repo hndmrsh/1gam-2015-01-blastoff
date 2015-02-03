@@ -8,6 +8,9 @@ public class Ship : MonoBehaviour {
     public AudioClip fire, stop;
     private AudioSource engine;
 
+    public Mesh damagedMesh;
+    public Material damagedMaterial;
+
     public bool Dead
     {
         get;
@@ -38,11 +41,13 @@ public class Ship : MonoBehaviour {
         {
             AudioSource.PlayClipAtPoint(fire, this.transform.position);
             engine.Play();
+            GetComponentInChildren<ParticleSystem>().Play();
         }
         else
         {
             engine.Stop();
             AudioSource.PlayClipAtPoint(stop, this.transform.position);
+            GetComponentInChildren<ParticleSystem>().Stop();
         }
     }
 
@@ -64,13 +69,22 @@ public class Ship : MonoBehaviour {
     // OnCollisionEnter is called when this collider/rigidbody has begun touching another rigidbody/collider (Since v1.0)
     public void OnCollisionEnter(Collision collision)
     {
-        if (collision.gameObject.GetComponent<Enemy>())
+        Enemy e = collision.gameObject.GetComponent<Enemy>();
+        if (e)
         {
-            Dead = true;
-            engine.Stop();
+            if (!Dead)
+            {
+                Dead = true;
+                engine.Stop();
 
-            GameController gameController = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameController>();
-            gameController.GameOver();
+                GameController gameController = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameController>();
+                gameController.GameOver();
+
+                GetComponent<MeshFilter>().mesh = damagedMesh;
+                GetComponent<MeshRenderer>().material = damagedMaterial;
+            }
+
+            e.BlowUp();
         }
     }
 

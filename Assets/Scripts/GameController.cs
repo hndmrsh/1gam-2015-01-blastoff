@@ -11,6 +11,11 @@ public class GameController : MonoBehaviour {
     public AudioSource introMusic;
     public AudioSource endMusic;
 
+    public Color startColour;
+    public Color endColour;
+
+    public int dayEnd, nightStart;
+
     public GUIStyle guiStyle;
     public GUIStyle deadGuiStyle;
 
@@ -129,21 +134,24 @@ public class GameController : MonoBehaviour {
                 fading = false;
             }
         }
-        
+
+        float t = (playerShip.transform.position.y - dayEnd) / (float)(nightStart - dayEnd);
+        Debug.Log("t = " + t);
+        camera.backgroundColor = Color.Lerp(startColour, endColour, t);
+
         if (playerShip.Dead)
         {
-            Time.timeScale = 0;
             if (touch && !IgnoreCurrentTouch)
             {
                 // restart game
-                Time.timeScale = 1;
                 Application.LoadLevel(Application.loadedLevel);
             }
         }
-        playerShip.ThrustOn = touch;
+
+        playerShip.ThrustOn = touch && !playerShip.Dead;
 
         // check if ship is within "pan zone"
-        bool shouldCameraPan = CheckCameraPan();
+        bool shouldCameraPan = CheckCameraPan() && !playerShip.Dead;
         if (shouldCameraPan)
         {
             camera.transform.parent = playerShip.transform;

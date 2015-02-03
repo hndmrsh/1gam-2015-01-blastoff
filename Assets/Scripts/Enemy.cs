@@ -11,10 +11,14 @@ public class Enemy : MonoBehaviour {
 
     private const float OFFSCREEN_SPAWN_MULTIPLIER = 2f;
 
+
     public float enemySpeed = 200f;
     [Range(0f,1f)]
     public float speedRandomness = 0.1f;
     public Direction movementDirection;
+
+    public ParticleSystem particleSystem;
+    public SphereCollider forceBall;
 
     private float destroyX;
     private float speedMultiplier;
@@ -128,6 +132,13 @@ public class Enemy : MonoBehaviour {
 
 
         return true;
+    }
+
+    public void BlowUp()
+    {
+        Instantiate(particleSystem, transform.position, Quaternion.identity);
+        //Instantiate(forceBall, transform.position, Quaternion.identity);
+        Destroy(gameObject);
     }
 	
 }
