@@ -135,7 +135,7 @@ public class GameController : MonoBehaviour {
             }
         }
 
-        float t = (playerShip.transform.position.y - dayEnd) / (float)(nightStart - dayEnd);
+        float t = (camera.transform.position.y - dayEnd) / (float)(nightStart - dayEnd);
         Debug.Log("t = " + t);
         camera.backgroundColor = Color.Lerp(startColour, endColour, t);
 
