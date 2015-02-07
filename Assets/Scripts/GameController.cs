@@ -7,6 +7,8 @@ public class GameController : MonoBehaviour {
     private const string KEY_HIGH_SCORE = "key_high_score";
     private const int PLAYER_LAYER_MASK = 1 << 9;
     private const float TIME_TO_FADE = 0.2f;
+    private const float TIME_FOR_DUMMIES = 3f;
+    private const float END_MUSIC_DELAY = 0.8f;
 
     public AudioSource introMusic;
     public AudioSource endMusic;
@@ -20,8 +22,16 @@ public class GameController : MonoBehaviour {
     public GUIStyle deadGuiStyle;
 
     public GameObject titleCard;
+    public GameObject scoreCard;
+    public Text touchToStartText;
+
     private Text[] titleTexts;
+    private Text[] scoreTexts;
+    private Color[] startTitleColours;
+    private Color[] startScoreColours;
     private Color[] targetTitleColours;
+    private Color[] targetScoreColours;
+
     private bool fading = false;
     private float timeFaded = 0f;
 
@@ -35,14 +45,15 @@ public class GameController : MonoBehaviour {
     public Camera camera;
 
     private bool started = false;
+    private float dummyTimer = 0f;
 
     [Range(0,1)]
     public float spawnRandomness = 0.2f;
 
-    [Range(0.1f, 2.0f)]
+    [Range(0.1f, 0.8f)]
     public float minSpawnRateSeconds = 1.2f;
 
-    [Range(0.1f,2.0f)]
+    [Range(0.001f,0.8f)]
     public float maxSpawnRateSeconds = 0.1f;
 
 
@@ -74,9 +85,14 @@ public class GameController : MonoBehaviour {
     private bool desktopTouchDown;
     private float timeToNextEnemySpawn;
 
+    public Image vignette;
+    private float vignetteMinAlpha = (30f / 255f);
+    private float vignetteMaxAlpha = (40f / 255f);
+
 	// Use this for initialization
 	void Start () {
         desktopTouchDown = false;
+        IgnoreCurrentTouch = true;
 
         float halfScreenWidth = Screen.width / 2;
         float boundDown = Screen.height * panBounds;
@@ -91,21 +107,44 @@ public class GameController : MonoBehaviour {
         highScore = PlayerPrefs.GetInt(KEY_HIGH_SCORE, 0);
         highScoreText.text = highScore.ToString();
 
-        titleTexts = titleCard.GetComponentsInChildren<Text>();
-        targetTitleColours = new Color[titleTexts.Length];
-        for(int i = 0; i < titleTexts.Length; i++)
-        {
-            Color c = titleTexts[i].color;
-            c.a = 0f;
-            targetTitleColours[i] = c;
-        }
+        // initialize targetColours
+        InitializeTextGroupTargetColours(titleCard, out titleTexts, out startTitleColours, out targetTitleColours);
+        InitializeTextGroupTargetColours(scoreCard, out scoreTexts, out targetScoreColours, out startScoreColours);
+
+        touchToStartText.gameObject.SetActive(false);
 
         GenerateTimeToNextEnemySpawn();
 	}
 
+    private void InitializeTextGroupTargetColours(GameObject textGroup, out Text[] texts, out Color[] startColours, out Color[] targetColours)
+    {
+        texts = textGroup.GetComponentsInChildren<Text>();
+        
+        startColours = new Color[texts.Length];
+        for (int i = 0; i < texts.Length; i++)
+        {
+            Color c = texts[i].color;
+            c.a = 1f;
+            startColours[i] = c;
+        }
+
+        targetColours = new Color[texts.Length];
+        for (int i = 0; i < texts.Length; i++)
+        {
+            Color c = texts[i].color;
+            c.a = 0f;
+            targetColours[i] = c;
+        }
+    }
+
 	// Update is called once per frame
 	void Update () 
     {
+        // check for back button on Android
+        if (Application.isMobilePlatform && Input.GetKeyDown(KeyCode.Escape)) {
+            Application.Quit(); 
+        }
+
         // check for touch and apply thrust to ship
         bool touch = CheckInput();
 
@@ -113,6 +152,14 @@ public class GameController : MonoBehaviour {
         {
             started = true;
             introMusic.Play();
+        }
+        else if (!started && dummyTimer < TIME_FOR_DUMMIES)
+        {
+            dummyTimer += Time.deltaTime;
+        } 
+        else if (!started && !touchToStartText.gameObject.activeSelf) 
+        {
+            touchToStartText.gameObject.SetActive(true);
         }
 
         if (touch && timeFaded < TIME_TO_FADE)
@@ -122,9 +169,16 @@ public class GameController : MonoBehaviour {
 
         if (fading)
         {
+            float dC = timeFaded / TIME_TO_FADE;
+            
             for (int i = 0; i < titleTexts.Length; i++)
             {
-                titleTexts[i].color = Color.Lerp(titleTexts[i].color, targetTitleColours[i], timeFaded / TIME_TO_FADE);
+                titleTexts[i].color = Color.Lerp(startTitleColours[i], targetTitleColours[i], dC);
+            }
+
+            for (int i = 0; i < scoreTexts.Length; i++)
+            {
+                scoreTexts[i].color = Color.Lerp(startScoreColours[i], targetScoreColours[i], dC);
             }
 
             timeFaded += Time.deltaTime;
@@ -132,16 +186,30 @@ public class GameController : MonoBehaviour {
             if (timeFaded >= TIME_TO_FADE)
             {
                 fading = false;
+                for (int i = 0; i < titleTexts.Length; i++)
+                {
+                    titleTexts[i].color = targetTitleColours[i];
+                }
+
+                for (int i = 0; i < scoreTexts.Length; i++)
+                {
+                    scoreTexts[i].color = targetScoreColours[i];
+                }
             }
         }
 
+        // set background colour
         float t = (camera.transform.position.y - dayEnd) / (float)(nightStart - dayEnd);
-        Debug.Log("t = " + t);
         camera.backgroundColor = Color.Lerp(startColour, endColour, t);
+
+        // flicker vignette
+        Color c = vignette.color;
+        c.a = Mathf.Lerp(vignetteMinAlpha, vignetteMaxAlpha, Random.value);
+        vignette.color = c;
 
         if (playerShip.Dead)
         {
-            if (touch && !IgnoreCurrentTouch)
+            if (touch)
             {
                 // restart game
                 Application.LoadLevel(Application.loadedLevel);
@@ -173,6 +241,9 @@ public class GameController : MonoBehaviour {
             {
                 highScoreText.text = score.ToString();
             }
+
+            int target = (dayEnd + nightStart) / 3;
+            playerShip.SetLightEnabled(score >= target);
         }
 	}
 
@@ -199,6 +270,7 @@ public class GameController : MonoBehaviour {
 
         float minTime = spawnRate * (1 - spawnRandomness);
         float maxTime = spawnRate * (1 + spawnRandomness);
+
         timeToNextEnemySpawn += Mathf.Lerp(minTime, maxTime, Random.value);
     }
 
@@ -237,12 +309,16 @@ public class GameController : MonoBehaviour {
     {
         if(Application.isMobilePlatform)
         {
-            if(Input.touches.Length > 0)
+            if(Input.touches.Length > 0 && !IgnoreCurrentTouch)
             {
                 return true;
             }
 
-            IgnoreCurrentTouch = false;
+            if (Input.touches.Length == 0)
+            {
+                IgnoreCurrentTouch = false;
+            }
+
             return false;
         } 
         else 
@@ -260,6 +336,9 @@ public class GameController : MonoBehaviour {
             if (!desktopTouchDown)
             {
                 IgnoreCurrentTouch = false;
+            } 
+            else if (IgnoreCurrentTouch) {
+                desktopTouchDown = false;
             }
 
             return desktopTouchDown;
@@ -280,12 +359,16 @@ public class GameController : MonoBehaviour {
             introMusic.Stop();
         }
 
-        endMusic.Play();
+        endMusic.PlayDelayed(END_MUSIC_DELAY);
 
-        tryAgainText.gameObject.SetActive(true);
+        
         if (score > highScore)
         {
             newHighScoreText.gameObject.SetActive(true);
+        }
+        else
+        {
+            tryAgainText.gameObject.SetActive(true);
         }
     }
 }

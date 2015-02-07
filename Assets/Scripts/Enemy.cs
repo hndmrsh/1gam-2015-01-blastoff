@@ -9,7 +9,7 @@ public class Enemy : MonoBehaviour {
         Left, Right
     }
 
-    private const float OFFSCREEN_SPAWN_MULTIPLIER = 2f;
+    private const float OFFSCREEN_SPAWN_MULTIPLIER = 5f;
 
 
     public float enemySpeed = 200f;
@@ -19,6 +19,8 @@ public class Enemy : MonoBehaviour {
 
     public ParticleSystem particleSystem;
     public SphereCollider forceBall;
+
+    public GameObject explosionClipHolder;
 
     private float destroyX;
     private float speedMultiplier;
@@ -136,6 +138,7 @@ public class Enemy : MonoBehaviour {
 
     public void BlowUp()
     {
+        Instantiate(explosionClipHolder, transform.position, Quaternion.identity);
         Instantiate(particleSystem, transform.position, Quaternion.identity);
         //Instantiate(forceBall, transform.position, Quaternion.identity);
         Destroy(gameObject);

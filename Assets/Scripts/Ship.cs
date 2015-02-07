@@ -3,6 +3,12 @@ using System.Collections;
 
 public class Ship : MonoBehaviour {
 
+    private const float MAX_FLICKER_TIME = 0.2f;
+    private const int MAX_FLICKERS = 5;
+
+    private const float MAX_CAMERA_SHAKE = 0.08f;
+    private const float MAX_VELOCITY = 20f;
+
     public int thrustAmount = 1000;
 
     public AudioClip fire, stop;
@@ -10,6 +16,17 @@ public class Ship : MonoBehaviour {
 
     public Mesh damagedMesh;
     public Material damagedMaterial;
+
+    private Light cockpitLight;
+    private bool cockpitLightOn;
+    private float currentFlickerTime;
+    private int flickersLeft;
+
+    public float engineOnVolume = 0.4f;
+    public float engineOffVolume = 0.08f;
+
+    private float startCameraRotX;
+    private float startCameraRotY;
 
     public bool Dead
     {
@@ -39,13 +56,13 @@ public class Ship : MonoBehaviour {
     {
         if (play)
         {
+            engine.volume = engineOnVolume;
             AudioSource.PlayClipAtPoint(fire, this.transform.position);
-            engine.Play();
             GetComponentInChildren<ParticleSystem>().Play();
         }
         else
         {
-            engine.Stop();
+            engine.volume = engineOffVolume;
             AudioSource.PlayClipAtPoint(stop, this.transform.position);
             GetComponentInChildren<ParticleSystem>().Stop();
         }
@@ -55,6 +72,13 @@ public class Ship : MonoBehaviour {
     {
         Dead = false;
         engine = GetComponent<AudioSource>();
+        engine.volume = engineOffVolume;
+
+        cockpitLight = GetComponentInChildren<Light>();
+
+        Vector3 cameraRot = Camera.main.transform.rotation.eulerAngles;
+        startCameraRotX = cameraRot.x;
+        startCameraRotY = cameraRot.y;
     }
 
     public void Update()
@@ -63,6 +87,36 @@ public class Ship : MonoBehaviour {
         {
             Vector3 thrust = transform.up * (thrustAmount * Time.deltaTime);
             rigidbody.AddForce(thrust);
+        }
+
+
+        if (flickersLeft > 0 && cockpitLightOn) 
+        {
+            if (currentFlickerTime <= 0f)
+            {
+                flickersLeft--;
+
+                currentFlickerTime = (float) (Random.value * MAX_FLICKER_TIME);
+
+                cockpitLight.enabled = !cockpitLight.enabled;
+            }
+            else
+            {
+                currentFlickerTime -= Time.deltaTime;
+
+            }
+        }
+        else
+        {
+            cockpitLight.enabled = cockpitLightOn;
+        }
+
+        if (!Dead)
+        {
+            float maxCameraShakeWeighted = Mathf.Abs((rigidbody.velocity.y / MAX_VELOCITY) * MAX_CAMERA_SHAKE);
+            float xRot = Random.Range(startCameraRotX - maxCameraShakeWeighted, startCameraRotX + maxCameraShakeWeighted);
+            float yRot = Random.Range(startCameraRotY - maxCameraShakeWeighted, startCameraRotY + maxCameraShakeWeighted);
+            Camera.main.transform.rotation = Quaternion.Euler(new Vector3(xRot, yRot));
         }
     }
 
@@ -77,6 +131,9 @@ public class Ship : MonoBehaviour {
                 Dead = true;
                 engine.Stop();
 
+                cockpitLightOn = false;
+                cockpitLight.enabled = false;
+
                 GameController gameController = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameController>();
                 gameController.GameOver();
 
@@ -86,6 +143,16 @@ public class Ship : MonoBehaviour {
 
             e.BlowUp();
         }
+    }
+
+    public void SetLightEnabled(bool enabled)
+    {
+        if (!cockpitLightOn && enabled)
+        {
+            flickersLeft = MAX_FLICKERS;
+        }
+
+        cockpitLightOn = enabled;
     }
 
 }
